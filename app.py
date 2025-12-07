@@ -4,7 +4,7 @@ import numpy as np
 import ast
 import re
 
-# --- Configuration and Initial Setup ---
+## --- Configuration and Initial Setup ---
 st.set_page_config(layout="wide", page_title="Chef's Compass")
 
 # -------------------------------------------------
