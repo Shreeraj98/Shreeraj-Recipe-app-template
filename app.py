@@ -10,14 +10,14 @@ st.set_page_config(layout="wide", page_title="Chef's Compass")
 # -------------------------------------------------
 # Load Data Configuration
 # -------------------------------------------------
-# IMPORTANT: Update this path to where your CSV file is located.
-DATA_PATH = r'data\deduplicated_recipes_with_complexity.csv'
+# CORRECTED: Using a relative path that works locally and on deployment
+DATA_PATH = 'data/deduplicated_recipes_with_complexity.csv'
 
-## Dashboard Name and Tagline
+# Dashboard Name and Tagline
 DASHBOARD_NAME = "👨‍🍳 Chef's Compass"
 TAGLINE = "Navigate your ingredients, discover your next favorite recipe."
 
-# Placeholders for About Us section
+# Placeholders for About Us section (Used by pages/02_About Us.py)
 USER_GMAIL = "shreerajpatil98@gmail.mail.com"
 USER_LINKEDIN_URL = "https://www.linkedin.com/in/shreeraj-patil-142011136?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
 DATASET_LINK = "https://www.kaggle.com/datasets/prashantsingh001/recipes-dataset-64k-dishes" 
@@ -128,7 +128,7 @@ CUSTOM_CSS = """
 </style>
 """
 
-# --- Utility Functions (All utility functions remain unchanged) ---
+# --- Utility Functions ---
 
 def render_html_component_box(html_content, key):
     """Utility to reliably render complex HTML components using st.empty."""
@@ -142,12 +142,12 @@ def convert_df_to_csv(df):
     return df.to_csv(index=False).encode('utf-8')
 
 @st.cache_data
-def load_data(DATA_PATH):
+def load_data(path):
     """Loads and preprocesses the recipe data."""
     try:
-        df = pd.read_csv(DATA_PATH)
+        df = pd.read_csv(path)
     except FileNotFoundError:
-        st.error(f"Error: Data file not found at {DATA_PATH}")
+        st.error(f"Error: Data file not found at {path}")
         return pd.DataFrame(), [], []
 
     q1 = df['num_steps'].quantile(0.25)
@@ -243,22 +243,6 @@ def remove_from_favorites(recipe_title):
     ]
     st.success(f"Removed **{recipe_title}** from favorites.")
 
-def generate_qr_code_html(data_to_encode, label, qr_color='000000'): 
-    """Generates and displays a colorful QR code (scannable)."""
-    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={data_to_encode}&color={qr_color}"
-    
-    html_content = f"""
-    <div style="text-align: center; margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: white;">
-        <p style="font-size: large; font-weight: bold; margin-bottom: 10px; color: #5D5D81;">{label}</p>
-        <p style="font-size: small; color: #333; margin-bottom: 10px;">Scan Code:</p>
-        <img src="{qr_code_url}" alt="QR code for {label}" style="width:150px; height:150px; display: block; margin: auto;">
-    </div>
-    """
-    st.markdown(html_content, unsafe_allow_html=True)
-
-
-# --- Page Functions ---
-
 def render_recipe_count_box(num_recipes):
     """Renders the custom HTML box for the recipe count."""
     html_content = f"""
@@ -269,9 +253,43 @@ def render_recipe_count_box(num_recipes):
     """
     render_html_component_box(html_content, key='recipe_count_placeholder')
 
+def apply_filter_action(should_scroll=True):
+    """
+    Handler for the 'Apply Filters' button click.
+    Calculates results and optionally scrolls the page.
+    """
+    selected_cat = st.session_state.selected_category_selectbox
+    selected_ing = st.session_state.selected_ingredients_dropdown
+    keywords = "" 
+    threshold = st.session_state.threshold_slider
+    
+    st.session_state.filtered_results = filter_recipes(
+        st.session_state.data, 
+        selected_ing, 
+        keywords, 
+        threshold,
+        selected_cat
+    )
+
+    if should_scroll:
+        st.success("Filters applied! Results updated.")
+        # Inject JavaScript to smoothly scroll
+        scroll_script = """
+            <script>
+                var element = document.getElementById('detailed_list_anchor');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            </script>
+        """
+        st.markdown(scroll_script, unsafe_allow_html=True)
+
+# --- Page Functions (Recipe Explorer and Favorites are kept here as requested) ---
 
 def page_recipe_explorer(df):
     """Handles the filtering and results display for recipes."""
+    
+    st.title("Recipe Explorer 🔍")
     
     # --- Sidebar Filtering Logic ---
     st.sidebar.markdown("## Ingredient Filters")
@@ -465,38 +483,6 @@ def page_favorites():
     st.markdown("---")
 
 
-def apply_filter_action(should_scroll=True):
-    """
-    Handler for the 'Apply Filters' button click.
-    Calculates results and optionally scrolls the page.
-    """
-    selected_cat = st.session_state.selected_category_selectbox
-    selected_ing = st.session_state.selected_ingredients_dropdown
-    keywords = "" 
-    threshold = st.session_state.threshold_slider
-    
-    st.session_state.filtered_results = filter_recipes(
-        st.session_state.data, 
-        selected_ing, 
-        keywords, 
-        threshold,
-        selected_cat
-    )
-
-    if should_scroll:
-        st.success("Filters applied! Results updated.")
-        # Inject JavaScript to smoothly scroll
-        scroll_script = """
-            <script>
-                var element = document.getElementById('detailed_list_anchor');
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            </script>
-        """
-        st.markdown(scroll_script, unsafe_allow_html=True)
-
-
 # --- Main App Execution ---
 
 if __name__ == '__main__':
@@ -511,7 +497,8 @@ if __name__ == '__main__':
         st.session_state.all_ingredients = all_ingredients
         st.session_state.all_categories = all_categories
     except Exception:
-        st.error(f"Error initializing data. Please check the data file: `{DATA_PATH}`.")
+        # Note: If this error occurs, ensure the 'data' folder and CSV are in your GitHub repo.
+        st.error(f"Error initializing data. Please check the data file: `{DATA_PATH}`. Ensure it is in a 'data' subfolder.")
         st.stop()
     
     # 3. Initialize session state
@@ -533,20 +520,29 @@ if __name__ == '__main__':
 
     if 'threshold_slider' not in st.session_state:
         st.session_state.threshold_slider = 50
+
+    if 'app_page_select' not in st.session_state:
+        st.session_state['app_page_select'] = 'Recipe Explorer'
     
     # 4. Calculate initial results on first load
     if 'filtered_results' not in st.session_state:
         apply_filter_action(should_scroll=False)
 
-    
+    # --- Sidebar Navigation for Pages within app.py ---
     st.sidebar.title(DASHBOARD_NAME)
     st.sidebar.markdown(f"**_{TAGLINE}_**")
     
-    # Display the current page based on the navigation structure
+    # Allows switching between Recipe Explorer and Favorites in the sidebar
+    # The other pages (01_ and 02_) are handled automatically by Streamlit
+    page_selection = st.sidebar.radio(
+        "**Main Navigation**",
+        ('Recipe Explorer', 'Favorites'),
+        key='app_page_select'
+    )
     
-    if st.session_state.get('page_radio_select') == 'Favorites':
+    # --- Page Router for Pages within app.py ---
+    if page_selection == 'Favorites':
         page_favorites()
     else:
-        # Default to Recipe Explorer if no page selection is made, or if it's the intended default page
+        # Default to Recipe Explorer
         page_recipe_explorer(data)
-    
