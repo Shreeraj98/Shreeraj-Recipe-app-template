@@ -142,12 +142,12 @@ def convert_df_to_csv(df):
     return df.to_csv(index=False).encode('utf-8')
 
 @st.cache_data
-def load_data(path):
+def load_data(DATA_PATH):
     """Loads and preprocesses the recipe data."""
     try:
-        df = pd.read_csv(path)
+        df = pd.read_csv(DATA_PATH)
     except FileNotFoundError:
-        st.error(f"Error: Data file not found at {path}")
+        st.error(f"Error: Data file not found at {DATA_PATH}")
         return pd.DataFrame(), [], []
 
     q1 = df['num_steps'].quantile(0.25)
