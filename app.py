@@ -11,7 +11,7 @@ st.set_page_config(layout="wide", page_title="Chef's Compass")
 # Load Data Configuration
 # -------------------------------------------------
 # IMPORTANT: Update this path to where your CSV file is located.
-DATA_PATH = r'C:\Users\shree\OneDrive\Documents\Shreeraj-Recipe-app-template\data\deduplicated_recipes_with_complexity.csv'
+DATA_PATH = r'data\deduplicated_recipes_with_complexity.csv'
 
 ## Dashboard Name and Tagline
 DASHBOARD_NAME = "👨‍🍳 Chef's Compass"
